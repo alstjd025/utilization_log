@@ -8,7 +8,9 @@
 #include <fstream>
 #include <fcntl.h>
 #include <vector>
+#include <queue>
 #include <atomic>
+
 
 struct cpuusage {
   char name[20];
@@ -41,8 +43,10 @@ class SysMonitor{
     std::thread GPU_daemon;
     std::thread debugger_daemon;
     
-    std::vector<float> cpu_util_ratio; 
-    std::vector<struct cpuusage> prev_cpu_usages;
+    std::vector<int> cpu_util_ratio; 
+    std::queue<struct cpuusage> prev_cpu_usages;
+    // std::vector<struct cpuusage> prev_cpu_usages;
+    
     float gpu_util_ratio; 
 
     int period;
