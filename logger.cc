@@ -11,7 +11,7 @@
 // #define Experiment
 SysMonitor::SysMonitor(){}
 
-SysMonitor::SysMonitor(std::string directory_, int period_){
+SysMonitor::SysMonitor(std::string& directory_, int period_){
   period = period_;
   directory = directory_;
   log_File.open(directory);
@@ -20,7 +20,7 @@ SysMonitor::SysMonitor(std::string directory_, int period_){
   // #ifdef nvidia
   //   GPU_daemon = std::thread(&SysMonitor::GetGPUUtilization, this);
   // #endif
-  CPU_daemon.detach();
+  // CPU_daemon.detach();
   // #ifdef nvidia
   //   GPU_daemon.detach();
   // #endif
@@ -34,6 +34,7 @@ SysMonitor::~SysMonitor(){
 
 struct cpuusage SysMonitor::GetCPUusageFromCpustat(struct cpustat s) {
   struct cpuusage r;
+  std::cout << s.name << "\n";
   strncpy(r.name, s.name, sizeof(r.name));
   r.name[sizeof(r.name) - 1] = '\0';
   r.idletime = s.idle + s.iowait;
@@ -58,35 +59,28 @@ void SysMonitor::GetCPUGPUUtilization() {
   const int cpu_stat = open("/proc/stat", O_RDONLY);
   assert(cpu_stat != -1);
   fcntl(cpu_stat, F_SETFL, O_NONBLOCK);
-  std::cout << "a" << "\n";
   const int gpu_stat = open("/sys/devices/gpu.0/load", O_RDONLY);
   assert(gpu_stat != -1);
   fcntl(gpu_stat, F_SETFL, O_NONBLOCK);
-  std::cout << "b" << "\n";
   bool inital_cycle = true;
   // need timestamp
   struct timespec current_time;
   while (1) {
     // Read CPU utilizations
     // let's read everything in one call so it's nicely synced.
-  std::cout << "c" << "\n";
     int r_cpu = lseek(cpu_stat, SEEK_SET, 0);
     assert(r_cpu != -1);
     char buffer_cpu[10001];
-    std::cout << "d" << "\n";
     const ssize_t readed_cpu = read(cpu_stat, buffer_cpu, sizeof(buffer_cpu) - 1);
     assert(readed_cpu != -1);
     buffer_cpu[readed_cpu] = '\0';
     // Read the values from the readed buffer/
-    std::cout << "1" << "\n";
     FILE* cpu_file = fmemopen(buffer_cpu, readed_cpu, "r");
-    std::cout << "2" << "\n";
     struct cpustat c = {0};
     int cpu_idx = 0;
     while (fscanf(cpu_file, "%19s %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu", c.name, &c.user, &c.nice,
       &c.system, &c.idle, &c.iowait, &c.irq, &c.softirq, &c.steal, &c.guest,
       &c.guest_nice) == 11) {
-        std::cout << "3" << "\n";
       // Just an example for first cpu core.
       if (strcmp(c.name, "cpu") == 0) {
         if(CPU_NUM == 0){
@@ -98,7 +92,6 @@ void SysMonitor::GetCPUGPUUtilization() {
           continue;
         }
       }
-      std::cout << "4" << "\n";
       struct cpuusage now = GetCPUusageFromCpustat(c);
       if(!inital_cycle){
         cpu_util_ratio.push_back(CpuUsageGetDiff(now, prev_cpu_usages[cpu_idx]));
@@ -113,12 +106,13 @@ void SysMonitor::GetCPUGPUUtilization() {
         }
       }
       std::cout << "cpu_idx " << cpu_idx << "\n";
-      if(cpu_idx == CPU_NUM)
+      memset(buffer_cpu, 0, sizeof(buffer_cpu));
+      if(cpu_idx == CPU_NUM){
         break;
+      }
     }
     fclose(cpu_file);
-    std::cout << "4adsfafsd" << "\n";
-    // Read GPU utilizations
+    // // Read GPU utilizations
     int r = lseek(gpu_stat, SEEK_SET, 0);
     assert(r != -1);
     char buffer[8];
@@ -145,6 +139,7 @@ void SysMonitor::GetCPUGPUUtilization() {
     }
     inital_cycle = false;
     std::this_thread::sleep_for(std::chrono::milliseconds(period));
+    cpu_util_ratio.clear();
   }
 }
 

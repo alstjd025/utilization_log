@@ -25,7 +25,7 @@ struct cpustat {
 class SysMonitor{
   public:
     SysMonitor();
-    SysMonitor(std::string directory, int period);
+    SysMonitor(std::string& directory, int period);
     ~SysMonitor();
 
     void GetCPUGPUUtilization();
