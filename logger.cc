@@ -1,7 +1,7 @@
 #include "logger.h"
 #define nvidia
 // #define ramdisk_gpu_debug
-#define CPU_NUM 6 // 0 for global cpu ulization logging
+#define CPU_NUM 4 // 0 for global cpu ulization logging
 #define GPU_UTIL_FILE "/mnt/ramdisk/gpu_util"
 /*
   Note[MS] : GPU monitoring period under 5 ms may not safe?
